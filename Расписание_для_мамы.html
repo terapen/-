@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#6B73FF">
+    <title>📚 Расписание</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 16px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            padding: 12px;
+            background: white;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 76px;
+            z-index: 99;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            white-space: nowrap;
+            font-weight: 600;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-edit {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-save {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-reset {
+            background: #f44336;
+            color: white;
+        }
+
+        .status {
+            padding: 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: none;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            display: block;
+        }
+
+        .schedule-container {
+            padding: 16px 12px 80px 12px;
+        }
+
+        .day-card {
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .day-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px;
+            font-size: 1.2em;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .day-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.2em;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .day-toggle:active {
+            transform: scale(0.9);
+        }
+
+        .day-content {
+            padding: 12px;
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s;
+        }
+
+        .day-content.collapsed {
+            max-height: 0;
+            padding: 0 12px;
+        }
+
+        .lesson-item {
+            background: #f8f9fa;
+            padding: 14px;
+            margin: 8px 0;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+
+        .lesson-item:active {
+            transform: scale(0.98);
+        }
+
+        .lesson-item.editing {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .lesson-num {
+            background: #667eea;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9em;
+            flex-shrink: 0;
+        }
+
+        .lesson-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 1em;
+            font-family: inherit;
+            padding: 4px;
+        }
+
+        .lesson-input:focus {
+            outline: none;
+            background: white;
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        .lesson-input:disabled {
+            color: #333;
+        }
+
+        .time-badge {
+            background: #ffebee;
+            color: #d32f2f;
+            padding: 10px 16px;
+            margin: 12px 0 4px 0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1em;
+        }
+
+        .view-mode {
+            background: white;
+            padding: 12px;
+            text-align: center;
+            border-top: 2px solid #e0e0e0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+        }
+
+        .view-mode label {
+            display: inline-block;
+            margin: 0 8px;
+            font-weight: 600;
+        }
+
+        .view-mode input[type="radio"] {
+            margin-right: 4px;
+            transform: scale(1.2);
+        }
+
+        .today-highlight {
+            border: 3px solid #4CAF50;
+            box-shadow: 0 6px 16px rgba(76, 175, 80, 0.3);
+        }
+
+        .today-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📚 Расписание уроков</h1>
+        <p>2 четверть</p>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-edit" onclick="toggleEditMode()">✏️ Редактировать</button>
+        <button class="btn btn-save" onclick="saveSchedule()">💾 Сохранить</button>
+        <button class="btn btn-reset" onclick="resetSchedule()">🔄 Сбросить</button>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div class="schedule-container" id="scheduleContainer"></div>
+
+    <div class="view-mode">
+        <label><input type="radio" name="view" value="all" checked onchange="changeView(this.value)"> Все дни</label>
+        <label><input type="radio" name="view" value="today" onchange="changeView(this.value)"> Сегодня</label>
+        <label><input type="radio" name="view" value="tomorrow" onchange="changeView(this.value)"> Завтра</label>
+    </div>
+
+    <script>
+        let isEditMode = false;
+        let currentView = 'all';
+
+        const days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'];
+
+        const originalSchedule = {
+            'Понедельник': [
+                'Разговор о важном',
+                'Литературное чтение',
+                'Русский язык',
+                'Окружающий мир',
+                'Подвижные игры (Спортивная форма)'
+            ],
+            'Вторник': [
+                'Литературное чтение',
+                'Русский язык',
+                'Математика',
+                'Физическая культура'
+            ],
+            'Среда': [
+                'Математика',
+                'Русский язык',
+                'Литературное чтение',
+                'Крымоведение',
+                'Труд'
+            ],
+            'Четверг': [
+                'Математика',
+                'Окружающий мир',
+                'Русский язык',
+                'Физическая культура',
+                'Орлята России'
+            ],
+            'Пятница': [
+                'Математика',
+                'Литературное чтение',
+                'Русский язык',
+                'Музыка',
+                'ИЗО'
+            ]
+        };
+
+        const endTimes = {
+            'Понедельник': 'До 12:45',
+            'Вторник': 'До 11:40',
+            'Среда': 'До 12:45',
+            'Четверг': 'До 12:45',
+            'Пятница': 'До 12:45'
+        };
+
+        function getTodayDayName() {
+            const today = new Date().getDay();
+            return today >= 1 && today <= 5 ? days[today - 1] : null;
+        }
+
+        function getTomorrowDayName() {
+            const today = new Date().getDay();
+            const tomorrow = today === 5 ? 1 : (today === 6 ? 1 : today + 1);
+            return tomorrow >= 1 && tomorrow <= 5 ? days[tomorrow - 1] : null;
+        }
+
+        function renderSchedule() {
+            const container = document.getElementById('scheduleContainer');
+            const schedule = loadSchedule();
+            const todayName = getTodayDayName();
+            const tomorrowName = getTomorrowDayName();
+
+            let html = '';
+
+            days.forEach((day, dayIndex) => {
+                const lessons = schedule[day] || originalSchedule[day];
+                const isToday = day === todayName;
+                const isTomorrow = day === tomorrowName;
+
+                let displayStyle = '';
+                if (currentView === 'today' && !isToday) displayStyle = 'style="display:none"';
+                if (currentView === 'tomorrow' && !isTomorrow) displayStyle = 'style="display:none"';
+
+                html += `
+                    <div class="day-card ${isToday ? 'today-highlight' : ''}" data-day="${day}" ${displayStyle}>
+                        <div class="day-header">
+                            <span>
+                                ${day}
+                                ${isToday ? '<span class="today-badge">Сегодня</span>' : ''}
+                                ${isTomorrow ? '<span class="today-badge" style="background:#FF9800">Завтра</span>' : ''}
+                            </span>
+                            <button class="day-toggle" onclick="toggleDay('${day}')">▼</button>
+                        </div>
+                        <div class="day-content" id="content-${day}">
+                            ${lessons.map((lesson, i) => `
+                                <div class="lesson-item">
+                                    <div class="lesson-num">${i + 1}</div>
+                                    <input type="text" class="lesson-input" 
+                                           data-day="${day}" data-lesson="${i}" 
+                                           value="${lesson}" disabled>
+                                </div>
+                            `).join('')}
+                            <div class="time-badge">${endTimes[day]}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function toggleDay(day) {
+            const content = document.getElementById(`content-${day}`);
+            content.classList.toggle('collapsed');
+        }
+
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const btn = document.querySelector('.btn-edit');
+            const inputs = document.querySelectorAll('.lesson-input');
+
+            if (isEditMode) {
+                btn.textContent = '👁️ Просмотр';
+                btn.style.background = '#FF9800';
+                showStatus('Режим редактирования включен', 'info');
+
+                inputs.forEach(input => {
+                    input.disabled = false;
+                    input.parentElement.classList.add('editing');
+                });
+            } else {
+                btn.textContent = '✏️ Редактировать';
+                btn.style.background = '#4CAF50';
+
+                inputs.forEach(input => {
+                    input.disabled = true;
+                    input.parentElement.classList.remove('editing');
+                });
+            }
+        }
+
+        function saveSchedule() {
+            const schedule = {};
+            const inputs = document.querySelectorAll('.lesson-input');
+
+            inputs.forEach(input => {
+                const day = input.getAttribute('data-day');
+                const lessonIndex = parseInt(input.getAttribute('data-lesson'));
+
+                if (!schedule[day]) schedule[day] = [];
+                schedule[day][lessonIndex] = input.value;
+            });
+
+            localStorage.setItem('schedule', JSON.stringify(schedule));
+            showStatus('✅ Расписание сохранено!', 'success');
+
+            if (isEditMode) toggleEditMode();
+        }
+
+        function loadSchedule() {
+            const saved = localStorage.getItem('schedule');
+            return saved ? JSON.parse(saved) : originalSchedule;
+        }
+
+        function resetSchedule() {
+            if (confirm('Вернуться к исходному расписанию?\nВсе изменения будут потеряны.')) {
+                localStorage.removeItem('schedule');
+                renderSchedule();
+                showStatus('🔄 Расписание сброшено', 'info');
+                if (isEditMode) toggleEditMode();
+            }
+        }
+
+        function changeView(view) {
+            currentView = view;
+            renderSchedule();
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+
+            setTimeout(() => {
+                status.className = 'status';
+            }, 3000);
+        }
+
+        window.onload = function() {
+            renderSchedule();
+        };
+    </script>
+</body>
+</html>
